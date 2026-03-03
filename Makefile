@@ -2,7 +2,7 @@
 SUDO = sudo
 PODMAN = $(SUDO) podman
 
-IMAGE_NAME ?= localhost/almalinux-asahi-bootc
+IMAGE_NAME ?= ghcr.io/eseiker/almalinux-asahi-bootc
 CONTAINER_FILE ?= ./Dockerfile
 VARIANT ?=
 IMAGE_CONFIG ?= ./iso.toml
@@ -23,7 +23,7 @@ image:
 		--cap-add=all \
 		--device /dev/fuse \
 		--build-arg IMAGE_NAME=$(IMAGE_NAME) \
-		--build-arg IMAGE_REGISTRY=localhost \
+		--build-arg IMAGE_REGISTRY=ghcr.io \
 		--build-arg VARIANT=$(VARIANT) \
 		-t $(IMAGE_NAME) \
 		-f $(CONTAINER_FILE) \
