@@ -93,8 +93,8 @@ jobs:
     uses: AlmaLinux/atomic-ci/.github/workflows/build-iso.yml@v11
     with:
       image-name: "${{ needs.set-env.outputs.IMAGE_NAME }}"
-      image: "${{ needs.build-image.outputs.image-ref }}@${{ needs.build-image.outputs.digest }}"
-      update_origin_ref: "${{ needs.build-image.outputs.image-ref }}@${{ needs.build-image.outputs.digest }}"
+      image: "${{ needs.build-image.outputs.image-ref }}:${{ needs.set-env.outputs.LATEST_TAG }}"
+      update_origin_ref: "${{ needs.build-image.outputs.image-ref }}:${{ needs.set-env.outputs.LATEST_TAG }}"
       update_is_signed: ${{ needs.set-env.outputs.IS_SIGNED == 'true' }}
       config-file: ./iso.toml
       platforms: ${{ needs.set-env.outputs.PLATFORMS }}
