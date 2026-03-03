@@ -101,6 +101,10 @@ jobs:
       REGISTRY: ${{ needs.set-env.outputs.REGISTRY }}
       REGISTRY_USER: ${{ needs.set-env.outputs.REGISTRY_USER }}
       upload-to-cloudflare: false
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     secrets:
       REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
