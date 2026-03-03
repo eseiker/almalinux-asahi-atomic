@@ -19,7 +19,7 @@ in the workflow files and replace it with the appropriate secret.
 
 ### Base image
 
-This respin uses the minimal bootc image `quay.io/almalinuxorg/almalinux-bootc:10-kitten`, maintained by the
+This respin uses the minimal bootc image `quay.io/almalinuxorg/almalinux-bootc:10`, maintained by the
 [AlmaLinux bootc images project](https://github.com/AlmaLinux/bootc-images). The base image signature is verified
 with the Cosign public key stored as [`bootc-images.pub`](bootc-images.pub); update this file and the workflow
 reference if the upstream key changes.

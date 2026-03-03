@@ -7,7 +7,7 @@ COPY --chmod=0755 files/scripts /build_files/
 COPY *.pub /keys/
 
 # Base Image
-FROM quay.io/almalinuxorg/almalinux-bootc:10-kitten@sha256:27b2004c172b3d34053196f29ae972480ec26585de68c386b21e7d168c846656
+FROM quay.io/almalinuxorg/almalinux-bootc:10@sha256:4863f407b3a99f11dadd69c4798d161e0cf51f1b2ccda58ff62db0021758d334
 
 ARG IMAGE_NAME
 ARG IMAGE_REGISTRY
