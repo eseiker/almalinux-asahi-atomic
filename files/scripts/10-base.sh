@@ -2,10 +2,6 @@
 
 set -xeuo pipefail
 
-# Start customizing your image here
-
-# Examples:
-# dnf install -y 'dnf-command(config-manager)'
-# dnf config-manager --set-enabled crb
-
-echo "Hello, Atomic AlmaLinux respin world!."
+dnf install -y 'dnf-command(copr)'
+dnf -y copr enable eseiker/asahi-el-kernel
+dnf install -y kernel kernel-core kernel-modules kernel-modules-extra

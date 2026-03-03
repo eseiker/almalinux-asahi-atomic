@@ -1,6 +1,6 @@
-# My Atomic AlmaLinux Respin
+# AlmaLinux Asahi bootc (ARM64)
 
-Welcome to your brand-new Atomic AlmaLinux Respin!
+Welcome to your brand-new AlmaLinux Asahi bootc image for Apple Silicon.
 
 ## Initial Setup
 
@@ -12,20 +12,17 @@ In the ["config"](.github/actions/config/action.yml) action, you'll find a job w
 - `REGISTRY_USER`: Your username for the registry.
 - `IMAGE_PATH`: The path/namespace for your image.
 - `IMAGE_NAME`: The name of your image.
-- `PLATFORMS`: A quoted, comma-separated list of platforms to build for (e.g., `"amd64,arm64"`).
+- `PLATFORMS`: A quoted, comma-separated list of platforms to build for (default: `"arm64"`).
 
 If your registry is not GitHub or you need a specific token, search for `REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}`
 in the workflow files and replace it with the appropriate secret.
 
-### Pick a base desktop image
+### Base image
 
-By default, this template uses the base image `quay.io/almalinuxorg/atomic-desktop-gnome:10`, maintained by the
-[AlmaLinux Atomic SIG](https://wiki.almalinux.org/sigs/Atomic.html). If you prefer KDE, you can use
-`quay.io/almalinuxorg/atomic-desktop-kde:10` instead.
-
-To switch images, change the `FROM` line in the [Dockerfile](Dockerfile). If your image use a different
-signing key, download the new Cosign public key and specify its name in the `upstream-public-key`
-parameter in `.github/workflows/build.yml`, or remove the parameter to disable key verification.
+This respin uses the minimal bootc image `quay.io/almalinuxorg/almalinux-bootc:10-kitten`, maintained by the
+[AlmaLinux bootc images project](https://github.com/AlmaLinux/bootc-images). The base image signature is verified
+with the Cosign public key stored as [`bootc-images.pub`](bootc-images.pub); update this file and the workflow
+reference if the upstream key changes.
 
 ### Set up container signing (Optional, highly recommended)
 
@@ -190,7 +187,7 @@ directory for details.
 ## Resources
 
 - [AlmaLinux Atomic SIG](https://wiki.almalinux.org/sigs/Atomic.html)
-- [AlmaLinux Atomic Desktop Images](https://github.com/AlmaLinux/atomic-desktop)
+- [AlmaLinux bootc images](https://github.com/AlmaLinux/bootc-images)
 - [bootc documentation](https://github.com/containers/bootc)
 - [Podman documentation](https://podman.io/)
 - [QEMU documentation](https://www.qemu.org/)

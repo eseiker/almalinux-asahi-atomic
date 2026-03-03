@@ -2,7 +2,7 @@
 SUDO = sudo
 PODMAN = $(SUDO) podman
 
-IMAGE_NAME ?= localhost/myimage
+IMAGE_NAME ?= localhost/almalinux-asahi-bootc
 CONTAINER_FILE ?= ./Dockerfile
 VARIANT ?=
 IMAGE_CONFIG ?= ./iso.toml
