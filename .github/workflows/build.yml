@@ -62,7 +62,7 @@ jobs:
 
   test-image:
     name: Test image
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     needs: [set-env, build-image]
 
     env:
