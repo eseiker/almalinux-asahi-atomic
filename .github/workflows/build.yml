@@ -71,6 +71,9 @@ jobs:
     runs-on: ubuntu-24.04-arm
     needs: [set-env, build-image]
 
+    permissions:
+      packages: read
+
     env:
       IMAGE_REF: "${{ needs.build-image.outputs.image-ref }}@${{ needs.build-image.outputs.digest }}"
 
