@@ -2,7 +2,7 @@
 
 set -xeuo pipefail
 
-dnf -y install dnf-plugins-core epel-release @core --setopt=install_weak_deps=False
+dnf -y install dnf-plugins-core epel-release
 dnf config-manager --set-enabled crb
 dnf -y update
 
@@ -14,4 +14,4 @@ dnf -y swap kernel* kernel-16k --nogpgcheck
 kver=$(cd /usr/lib/modules && echo *); \
   dracut -vf /usr/lib/modules/$kver/initramfs.img $kver
 
-dnf -y install system-reinstall-bootc
+dnf -y install system-reinstall-bootc @core --setopt=install_weak_deps=False
