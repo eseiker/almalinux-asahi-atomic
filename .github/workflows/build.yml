@@ -50,7 +50,12 @@ jobs:
       platforms: ${{ needs.set-env.outputs.PLATFORMS }}
       skip-maximize-build-space: true
       image-path: ${{ needs.set-env.outputs.IMAGE_PATH }}
-      changelog-snippet: "relver:kernel-16k"
+      changelog-snippet: |
+        Major Components:
+          - Kernel: <relver:kernel-16k>
+          - Systemd: <relver:systemd>
+          - Glibc: <relver:glibc>
+          - Bootc: <relver:bootc>
       REGISTRY: ${{ needs.set-env.outputs.REGISTRY }}
       REGISTRY_USER: ${{ needs.set-env.outputs.REGISTRY_USER }}
     secrets:
