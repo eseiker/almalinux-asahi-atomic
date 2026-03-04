@@ -2,7 +2,7 @@
 
 set -xeuo pipefail
 
-dnf -y install dnf-plugins-core epel-release @core --exclude-weakdeps
+dnf -y install dnf-plugins-core epel-release @core --setopt=install_weak_deps=False
 dnf config-manager --set-enabled crb
 dnf -y update
 
