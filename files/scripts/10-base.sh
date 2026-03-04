@@ -7,5 +7,5 @@ dnf config-manager --set-enabled crb
 dnf install -y epel-release
 dnf -y copr enable eseiker/asahi-el-kernel
 dnf install -y --nogpgcheck kernel-16k
-dnf remove -y kernel kernel-core kernel-modules || true
+dnf remove -y kernel kernel-core kernel-modules
 ostree config set sysroot.bootprefix true
