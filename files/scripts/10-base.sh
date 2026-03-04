@@ -8,10 +8,10 @@ dnf -y update
 
 ostree config set sysroot.bootprefix true
 dnf -y copr enable eseiker/asahi-el-kernel
-dnf -y swap kernel* kernel-16k --nogpgcheck
+dnf -y --nogpgcheck swap kernel* kernel-16k
 
 # dracut generate initramfs workaround
 kver=$(cd /usr/lib/modules && echo *); \
   dracut -vf /usr/lib/modules/$kver/initramfs.img $kver
 
-dnf -y install system-reinstall-bootc @core --setopt=install_weak_deps=False
+dnf -y --nogpgcheck --setopt=install_weak_deps=False install system-reinstall-bootc @core
