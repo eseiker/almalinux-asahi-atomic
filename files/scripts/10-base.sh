@@ -2,10 +2,12 @@
 
 set -xeuo pipefail
 
-dnf install -y 'dnf-command(copr)' 'dnf-command(config-manager)'
+dnf install -y dnf-plugins-core epel-release
 dnf config-manager --set-enabled crb
-dnf install -y epel-release
+dnf -y update
 dnf -y copr enable eseiker/asahi-el-kernel
-dnf install -y --nogpgcheck kernel-16k
-dnf remove -y kernel kernel-core kernel-modules
 ostree config set sysroot.bootprefix true
+dnf -y swap kernel* kernel-16k --nogpgcheck
+# dracut generate initramfs workaround
+kver=$(cd /usr/lib/modules && echo *); \
+  dracut -vf /usr/lib/modules/$kver/initramfs.img $kver
