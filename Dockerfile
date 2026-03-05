@@ -7,7 +7,7 @@ COPY --chmod=0755 files/scripts /build_files/
 COPY *.pub /keys/
 
 # Base Image
-FROM quay.io/almalinuxorg/almalinux-bootc:10@sha256:4863f407b3a99f11dadd69c4798d161e0cf51f1b2ccda58ff62db0021758d334
+FROM quay.io/almalinuxorg/almalinux-bootc:10@sha256:4863f407b3a99f11dadd69c4798d161e0cf51f1b2ccda58ff62db0021758d334 AS base
 
 ARG IMAGE_NAME
 ARG IMAGE_REGISTRY
@@ -21,3 +21,26 @@ RUN --mount=type=tmpfs,dst=/opt \
 ### LINTING
 ## Verify final image and contents are correct.
 RUN bootc container lint
+
+# Installer Image
+FROM base AS anaconda
+
+RUN dnf install -y \
+     anaconda \
+     anaconda-install-env-deps \
+     anaconda-dracut \
+     dracut-config-generic \
+     dracut-network \
+     net-tools \
+     squashfs-tools \
+     grub2-efi-x64-cdboot \
+     python3-mako \
+     lorax-templates-* \
+     biosdevname \
+     prefixdevname \
+     && dnf clean all
+
+RUN mkdir -p /boot/efi && cp -ra /usr/lib/efi/*/*/EFI /boot/efi
+RUN mkdir /var/mnt
+
+FROM base
