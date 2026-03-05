@@ -45,7 +45,6 @@ jobs:
     with:
       image-description: "AlmaLinux Asahi bootc image"
       containerfile: Dockerfile
-      variant: base
       image-name: "${{ needs.set-env.outputs.IMAGE_NAME }}"
       previous-image: "${{ needs.set-env.outputs.IMAGE_REF }}:latest"
       upstream-public-key: bootc-images.pub
