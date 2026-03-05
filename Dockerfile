@@ -9,7 +9,7 @@ COPY --chmod=0755 files/scripts /build_files/
 COPY *.pub /keys/
 
 # Base Image
-FROM quay.io/almalinuxorg/almalinux-bootc:10@sha256:4863f407b3a99f11dadd69c4798d161e0cf51f1b2ccda58ff62db0021758d334 AS base
+FROM quay.io/almalinuxorg/almalinux-bootc:10@sha256:4863f407b3a99f11dadd69c4798d161e0cf51f1b2ccda58ff62db0021758d334 AS ${BASE_IMAGE}
 
 ARG IMAGE_NAME
 ARG IMAGE_REGISTRY
@@ -44,4 +44,4 @@ RUN dnf install -y \
 RUN mkdir -p /boot/efi && cp -ra /usr/lib/efi/*/*/EFI /boot/efi
 RUN mkdir /var/mnt
 
-FROM base
+FROM ${BASE_IMAGE}
