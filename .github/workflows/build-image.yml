@@ -114,7 +114,7 @@ env:
   IMAGE_REGISTRY: ${{ inputs.REGISTRY }}
   IMAGE_PATH: ${{ inputs.image-path }}
   SIGNING_ENABLED: ${{ (secrets.SIGNING_SECRET != null && secrets.SIGNING_SECRET != '') || inputs.KMS_KEY_ALIAS != '' }}
-  INTERNAL_ACTIONS_REF: eaceb432f7f176a158e32aa5c0f8a001943e17ac
+  INTERNAL_ACTIONS_REF: 50b6e3beea17e5bdf447e64dafee6388f3ffea46
   INTERNAL_ACTIONS_REPO: eseiker/atomic-ci
 
 concurrency:
