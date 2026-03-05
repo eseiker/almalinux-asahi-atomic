@@ -158,6 +158,30 @@ jobs:
           echo "USE_LIBREPO=${USE_LIBREPO}" >> "$GITHUB_ENV"
 
           INSTALLER_IMAGE="${{ inputs.installer-image }}"
+          if [ -n "$INSTALLER_IMAGE" ]; then
+            echo "INSTALLER_IMAGE=${INSTALLER_IMAGE}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build installer image locally when not provided
+        if: ${{ inputs.installer-image == '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          INSTALLER_REF="localhost/${{ inputs.image-name }}-anaconda:latest"
+
+          sudo podman build \
+            --target anaconda \
+            -t "${INSTALLER_REF}" \
+            -f Dockerfile \
+            .
+
+          echo "INSTALLER_IMAGE=${INSTALLER_REF}" >> "$GITHUB_ENV"
+
+      - name: Finalize build arguments
+        shell: bash
+        run: |
+          set -euo pipefail
+          INSTALLER_IMAGE="${INSTALLER_IMAGE:-}"
           if [ -z "$INSTALLER_IMAGE" ]; then
             INSTALLER_IMAGE="${{ inputs.image }}"
           fi
