@@ -7,15 +7,17 @@ COPY --chmod=0755 files/scripts /build_files/
 COPY *.pub /keys/
 
 # Base Image
-FROM quay.io/almalinuxorg/almalinux-bootc:10@sha256:4863f407b3a99f11dadd69c4798d161e0cf51f1b2ccda58ff62db0021758d334 AS base
+ARG BASE_IMAGE=quay.io/almalinuxorg/almalinux-bootc:10@sha256:4863f407b3a99f11dadd69c4798d161e0cf51f1b2ccda58ff62db0021758d334
+FROM ${BASE_IMAGE} AS base
 
+ARG USE_PREBUILT_BASE=false
 ARG IMAGE_NAME
 ARG IMAGE_REGISTRY
 
 RUN --mount=type=tmpfs,dst=/opt \
     --mount=type=tmpfs,dst=/tmp \
     --mount=type=bind,from=ctx,source=/,target=/ctx \
-    /ctx/build_files/build.sh
+    bash -c 'if [ "${USE_PREBUILT_BASE}" != "true" ]; then /ctx/build_files/build.sh; fi'
 
 ### LINTING
 ## Verify final image and contents are correct.
