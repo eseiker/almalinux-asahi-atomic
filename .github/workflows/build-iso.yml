@@ -153,6 +153,14 @@ jobs:
           fi
           echo "USE_LIBREPO=${USE_LIBREPO}" >> "$GITHUB_ENV"
 
+          ADDITIONAL_ARGS="--use-librepo=${USE_LIBREPO}"
+          case "${{ inputs.image-type }}" in
+            iso|bootc-installer)
+              ADDITIONAL_ARGS+=" --installer-payload-ref ${{ inputs.image }}"
+              ;;
+          esac
+          echo "ADDITIONAL_ARGS=${ADDITIONAL_ARGS}" >> "$GITHUB_ENV"
+
       - name: Prepare configuration
         shell: bash
         run: |
@@ -170,7 +178,7 @@ jobs:
           image: ${{ inputs.image }}
           config-file: ${{ inputs.config-file }}
           types: ${{ inputs.image-type }}
-          additional-args: --use-librepo=${{ env.USE_LIBREPO }}
+          additional-args: ${{ env.ADDITIONAL_ARGS }}
 
       - name: Collect outputs
         id: collect
