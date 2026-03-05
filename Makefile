@@ -5,6 +5,7 @@ PODMAN = $(SUDO) podman
 IMAGE_NAME ?= ghcr.io/eseiker/almalinux-asahi-bootc
 CONTAINER_FILE ?= ./Dockerfile
 IMAGE_CONFIG ?= ./iso.toml
+EXTRA_BUILD_ARGS ?=
 
 IMAGE_TYPE ?= iso
 QEMU_DISK_RAW ?= ./output/disk.raw
@@ -23,12 +24,13 @@ image:
 		--device /dev/fuse \
 		--build-arg IMAGE_NAME=$(IMAGE_NAME) \
 		--build-arg IMAGE_REGISTRY=ghcr.io \
+		$(EXTRA_BUILD_ARGS) \
 		-t $(IMAGE_NAME) \
 		-f $(CONTAINER_FILE) \
 		.
 
-image-anaconda:
-	$(MAKE) image CONTAINER_FILE=./Dockerfile.anaconda
+image-anaconda: image
+	$(MAKE) image CONTAINER_FILE=./Dockerfile.anaconda EXTRA_BUILD_ARGS=--build-arg\ BASE_IMAGE=$(IMAGE_NAME)
 
 bib_image:
 	$(SUDO) rm -rf ./output

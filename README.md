@@ -8,7 +8,7 @@ reference if the upstream key changes.
 
 ## Building
 
-Use `make image` to build the base bootc image with `Dockerfile`. To build the installer (anaconda) variant, use `make image-anaconda`, which targets `Dockerfile.anaconda`.
+Use `make image` to build the base bootc image with `Dockerfile`. To build the installer (anaconda) variant, use `make image-anaconda`; it reuses the base image you just built (override with `BASE_IMAGE=<ref>` if you want to point at a different tag).
 
 ## Resources
 
