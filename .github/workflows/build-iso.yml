@@ -111,7 +111,7 @@ jobs:
           done
           echo "matrix=$(echo "$MATRIX" | jq -c '.')" >> $GITHUB_OUTPUT
 
-  build-iso:
+  build-bootable-artifact:
     runs-on: ${{ matrix.platform == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
     needs: generate_matrix
     strategy:
