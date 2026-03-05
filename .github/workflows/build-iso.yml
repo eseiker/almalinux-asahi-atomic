@@ -7,6 +7,10 @@ on:
         description: "Full podman image reference, including hash"
         required: true
         type: string
+      installer-image:
+        description: "Installer payload image reference, including hash"
+        required: false
+        type: string
       image-name:
         description: "Name of the image, will be used to name the output file"
         required: true
@@ -153,10 +157,16 @@ jobs:
           fi
           echo "USE_LIBREPO=${USE_LIBREPO}" >> "$GITHUB_ENV"
 
+          INSTALLER_IMAGE="${{ inputs.installer-image }}"
+          if [ -z "$INSTALLER_IMAGE" ]; then
+            INSTALLER_IMAGE="${{ inputs.image }}"
+          fi
+          echo "INSTALLER_IMAGE=${INSTALLER_IMAGE}" >> "$GITHUB_ENV"
+
           ADDITIONAL_ARGS="--use-librepo=${USE_LIBREPO}"
           case "${{ inputs.image-type }}" in
             iso|bootc-installer)
-              ADDITIONAL_ARGS+=" --installer-payload-ref ${{ inputs.image }}"
+              ADDITIONAL_ARGS+=" --installer-payload-ref ${INSTALLER_IMAGE}"
               ;;
           esac
           echo "ADDITIONAL_ARGS=${ADDITIONAL_ARGS}" >> "$GITHUB_ENV"
