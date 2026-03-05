@@ -162,45 +162,6 @@ jobs:
             echo "INSTALLER_IMAGE=${INSTALLER_IMAGE}" >> "$GITHUB_ENV"
           fi
 
-      - name: Compute installer base cache key
-        if: ${{ inputs.installer-image == '' }}
-        id: installer-cache-key
-        shell: bash
-        run: |
-          set -euo pipefail
-          digest="${{ inputs.image }}"
-          safe_key=$(echo "${digest,,}" | tr '/@:' '---' | tr -c 'a-z0-9_.-' '-')
-          echo "key=anaconda-base-${safe_key}" >> "$GITHUB_OUTPUT"
-
-      - name: Restore installer base image cache
-        if: ${{ inputs.installer-image == '' }}
-        id: restore-installer-base
-        uses: actions/cache@v4
-        with:
-          path: /tmp/anaconda-base
-          key: ${{ steps.installer-cache-key.outputs.key }}
-
-      - name: Load installer base image from cache
-        if: ${{ inputs.installer-image == '' && steps.restore-installer-base.outputs.cache-hit == 'true' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          sudo podman load -i /tmp/anaconda-base/base.oci
-          echo "ANACONDA_BASE_IMAGE=${{ inputs.image }}" >> "$GITHUB_ENV"
-          echo "USE_PREBUILT_BASE=true" >> "$GITHUB_ENV"
-
-      - name: Pull and cache installer base image
-        if: ${{ inputs.installer-image == '' && steps.restore-installer-base.outputs.cache-hit != 'true' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p /tmp/anaconda-base
-          sudo podman pull "${{ inputs.image }}"
-          sudo podman save -o /tmp/anaconda-base/base.oci "${{ inputs.image }}"
-          sudo chown -R "$(id -u)":"$(id -g)" /tmp/anaconda-base
-          echo "ANACONDA_BASE_IMAGE=${{ inputs.image }}" >> "$GITHUB_ENV"
-          echo "USE_PREBUILT_BASE=true" >> "$GITHUB_ENV"
-
       - name: Build installer image locally when not provided
         if: ${{ inputs.installer-image == '' }}
         shell: bash
@@ -208,13 +169,11 @@ jobs:
           set -euo pipefail
           INSTALLER_REF="localhost/${{ inputs.image-name }}-anaconda:latest"
 
-          BASE_IMAGE="${ANACONDA_BASE_IMAGE:-${{ inputs.image }}}"
-          USE_PREBUILT="${USE_PREBUILT_BASE:-true}"
-
           sudo podman build \
             --target anaconda \
-            --build-arg BASE_IMAGE="${BASE_IMAGE}" \
-            --build-arg USE_PREBUILT_BASE="${USE_PREBUILT}" \
+            --build-arg BASE_IMAGE="${{ inputs.image }}" \
+            --build-arg USE_PREBUILT_BASE="true" \
+            --cache-from "${{ inputs.image }}" \
             -t "${INSTALLER_REF}" \
             -f Dockerfile \
             .
