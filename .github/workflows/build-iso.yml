@@ -93,9 +93,6 @@ on:
         description: "The AWS role ARN to assume for AWS S3 uploads"
         required: false
 
-env:
-  BUILDER_ACTION: alexiri/bootc-image-builder-action@platform
-
 jobs:
   generate_matrix:
     runs-on: ubuntu-latest
@@ -165,7 +162,7 @@ jobs:
 
       - name: Build artifact
         id: build
-        uses: ${{ env.BUILDER_ACTION }}
+        uses: alexiri/bootc-image-builder-action@platform
         with:
           image: ${{ inputs.image }}
           type: ${{ inputs.image-type }}
