@@ -289,7 +289,7 @@ jobs:
 
       - name: Upload to Job Artifacts
         if: inputs.upload-to-github == true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.collect.outputs.artifact_name }}
           path: ${{ steps.collect.outputs.output_directory }}
