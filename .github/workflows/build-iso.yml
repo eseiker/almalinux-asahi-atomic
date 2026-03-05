@@ -251,7 +251,10 @@ jobs:
                   for pattern in \
                     "/boot/vmlinuz*" "/boot/Image*" "/boot/kernel*" \
                     "/boot/initramfs*" "/boot/initrd*" \
-                    "/boot/dtb*" "/boot/dtbs*" "/boot/efi/*/*.dtb" "/boot/efi/*/*/*.dtb"; do
+                    "/boot/dtb*" "/boot/dtbs*" "/boot/efi/*/*.dtb" "/boot/efi/*/*/*.dtb" \
+                    "/usr/lib/modules/*/vmlinuz*" "/usr/lib/modules/*/Image*" "/usr/lib/modules/*/kernel*" \
+                    "/usr/lib/modules/*/initramfs*" "/usr/lib/modules/*/initrd*" \
+                    "/usr/lib/modules/*/dtb*" "/usr/lib/modules/*/dtbs*" "/usr/lib/modules/*/*/*.dtb"; do
                     if compgen -G "/mnt/rawroot${pattern}" > /dev/null; then
                       sudo cp -av /mnt/rawroot${pattern} "$NETBOOT_DIR/" || true
                       extracted=1
