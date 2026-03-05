@@ -33,7 +33,7 @@ on:
         description: "bootc-image-builder type (iso, raw, qcow2, etc)"
         required: false
         type: string
-        default: "iso"
+        default: "bootc-installer"
       use_librepo:
         description: "Use librepo to download the image"
         required: false
@@ -142,11 +142,14 @@ jobs:
 
           USE_LIBREPO=${{ inputs.use_librepo }}
           if [ -z "$USE_LIBREPO" ]; then
-            if [ "${{ inputs.image-type }}" != "iso" ]; then
-              USE_LIBREPO=true
-            else
-              USE_LIBREPO=false
-            fi
+            case "${{ inputs.image-type }}" in
+              iso|bootc-installer)
+                USE_LIBREPO=false
+                ;;
+              *)
+                USE_LIBREPO=true
+                ;;
+            esac
           fi
           echo "USE_LIBREPO=${USE_LIBREPO}" >> "$GITHUB_ENV"
 
@@ -162,13 +165,12 @@ jobs:
 
       - name: Build artifact
         id: build
-        uses: alexiri/bootc-image-builder-action@platform
+        uses: osbuild/bootc-image-builder-action@019bb59c5100ecec4e78c9e94e18a840110f7a0b # v0.0.2
         with:
           image: ${{ inputs.image }}
-          type: ${{ inputs.image-type }}
-          use-librepo: ${{ env.USE_LIBREPO }}
           config-file: ${{ inputs.config-file }}
-          platform: linux/${{ matrix.platform }}
+          types: ${{ inputs.image-type }}
+          additional-args: --use-librepo=${{ env.USE_LIBREPO }}
 
       - name: Collect outputs
         id: collect
@@ -176,29 +178,46 @@ jobs:
           CLEAN_ARCH: ${{ env.CLEAN_ARCH }}
           IMAGE_TYPE: ${{ inputs.image-type }}
           IMAGE_NAME: ${{ inputs.image-name }}
-          OUTPUT_PATH: ${{ steps.build.outputs.output-path }}
-          CHECKSUM_PATH: ${{ steps.build.outputs.checksum-path }}
+          OUTPUT_PATHS: ${{ steps.build.outputs.output-paths }}
         shell: bash
         run: |
           set -euo pipefail
+          OUTPUT_PATHS=${OUTPUT_PATHS:-{}}
           DEST_DIR="output-${CLEAN_ARCH}"
           mkdir -p "$DEST_DIR"
           DEST_DIR=$(realpath "$DEST_DIR")
 
-          FILE_NAME=$(basename "$OUTPUT_PATH")
+          ARTIFACT_PATH=$(jq -r --arg type "$IMAGE_TYPE" '.[$type].path // empty' <<< "$OUTPUT_PATHS")
+          ARTIFACT_CHECKSUM=$(jq -r --arg type "$IMAGE_TYPE" '.[$type].checksum // empty' <<< "$OUTPUT_PATHS")
+
+          if [ -z "$ARTIFACT_PATH" ]; then
+            echo "Artifact path for type '$IMAGE_TYPE' not found in outputs" >&2
+            exit 1
+          fi
+
+          FILE_NAME=$(basename "$ARTIFACT_PATH")
           EXT="${FILE_NAME##*.}"
 
-          if [ "$IMAGE_TYPE" = "iso" ]; then
-            BASE_NAME="${IMAGE_NAME}-${CLEAN_ARCH}-live"
-          else
-            BASE_NAME="${IMAGE_NAME}-${CLEAN_ARCH}-${IMAGE_TYPE}"
-          fi
+          case "$IMAGE_TYPE" in
+            iso)
+              BASE_NAME="${IMAGE_NAME}-${CLEAN_ARCH}-live"
+              ;;
+            bootc-installer)
+              BASE_NAME="${IMAGE_NAME}-${CLEAN_ARCH}-bootc-installer"
+              ;;
+            *)
+              BASE_NAME="${IMAGE_NAME}-${CLEAN_ARCH}-${IMAGE_TYPE}"
+              ;;
+          esac
 
           TARGET_NAME="${BASE_NAME}.${EXT}"
           CHECKSUM_NAME="${TARGET_NAME}-CHECKSUM"
 
-          cp "$OUTPUT_PATH" "${DEST_DIR}/${TARGET_NAME}"
-          cp "$CHECKSUM_PATH" "${DEST_DIR}/${CHECKSUM_NAME}"
+          cp "$ARTIFACT_PATH" "${DEST_DIR}/${TARGET_NAME}"
+
+          if [ -n "$ARTIFACT_CHECKSUM" ]; then
+            printf '%s  %s\n' "$ARTIFACT_CHECKSUM" "$TARGET_NAME" > "${DEST_DIR}/${CHECKSUM_NAME}"
+          fi
 
           echo "output_directory=${DEST_DIR}" >> "${GITHUB_OUTPUT}"
           echo "artifact_name=${BASE_NAME}" >> "${GITHUB_OUTPUT}"
@@ -219,7 +238,7 @@ jobs:
           extracted=0
           mkdir -p "$NETBOOT_DIR"
 
-          if [ "$IMAGE_TYPE" = "iso" ]; then
+          if [ "$IMAGE_TYPE" = "iso" ] || [ "$IMAGE_TYPE" = "bootc-installer" ]; then
             sudo apt-get update
             sudo apt-get install -y --no-install-recommends libarchive-tools
 

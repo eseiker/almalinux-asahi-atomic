@@ -54,7 +54,7 @@ runs:
         IMAGE_PATH=${{ github.repository_owner }}
         IMAGE_NAME=${{ github.event.repository.name }}
         PLATFORMS="arm64"
-        IMAGE_TYPE="raw"
+        IMAGE_TYPE="bootc-installer"
 
         echo "REGISTRY=${REGISTRY}" >> $GITHUB_OUTPUT
         echo "REGISTRY_USER=${REGISTRY_USER}" >> $GITHUB_OUTPUT
