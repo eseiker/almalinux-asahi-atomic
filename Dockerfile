@@ -22,7 +22,8 @@ RUN --mount=type=tmpfs,dst=/opt \
 RUN bootc container lint
 
 # Installer Image
-FROM base AS anaconda
+ARG BASE_IMAGE=base
+FROM ${BASE_IMAGE} AS anaconda
 
 RUN dnf install -y \
      anaconda \

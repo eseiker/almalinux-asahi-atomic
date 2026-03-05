@@ -171,6 +171,8 @@ jobs:
 
           sudo podman build \
             --target anaconda \
+            --build-arg BASE_IMAGE="${{ inputs.image }}" \
+            --cache-from "${{ inputs.image }}" \
             -t "${INSTALLER_REF}" \
             -f Dockerfile \
             .
