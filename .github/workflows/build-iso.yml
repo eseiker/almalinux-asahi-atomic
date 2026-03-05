@@ -169,10 +169,28 @@ jobs:
           set -euo pipefail
           INSTALLER_REF="localhost/${{ inputs.image-name }}-anaconda:latest"
 
+          CACHE_SOURCE="${{ inputs.image }}"
+          CACHE_REPO="${CACHE_SOURCE%@*}"
+
+          repo_suffix="${CACHE_REPO##*/}"
+          repo_prefix="${CACHE_REPO%/*}"
+          repo_name="${repo_suffix%%:*}"
+
+          if [[ "${repo_prefix}" == "${CACHE_REPO}" ]]; then
+            CACHE_REPO="${repo_name}"
+          else
+            CACHE_REPO="${repo_prefix}/${repo_name}"
+          fi
+
+          CACHE_ARGS=()
+          if [[ -n "${CACHE_REPO}" ]]; then
+            CACHE_ARGS+=(--cache-from "${CACHE_REPO}")
+          fi
+
           sudo podman build \
             --target anaconda \
             --build-arg BASE_IMAGE="${{ inputs.image }}" \
-            --cache-from "${{ inputs.image }}" \
+            "${CACHE_ARGS[@]}" \
             -t "${INSTALLER_REF}" \
             -f Dockerfile \
             .
