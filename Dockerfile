@@ -1,5 +1,6 @@
 # ba0fde3d-bee7-4307-b97b-17d0d20aff50
 # Allow build scripts to be referenced without being copied into the final image
+ARG VARIANT=base
 FROM scratch AS ctx
 
 COPY files/system /system_files/
@@ -43,4 +44,4 @@ RUN dnf install -y \
 RUN mkdir -p /boot/efi && cp -ra /usr/lib/efi/*/*/EFI /boot/efi
 RUN mkdir /var/mnt
 
-FROM base
+FROM ${VARIANT}
