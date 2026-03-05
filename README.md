@@ -6,6 +6,10 @@ This respin uses the minimal bootc image `quay.io/almalinuxorg/almalinux-bootc:1
 with the Cosign public key stored as [`bootc-images.pub`](bootc-images.pub); update this file and the workflow
 reference if the upstream key changes.
 
+## Building
+
+Use `make image` to build the base bootc image with `Dockerfile`. To build the installer (anaconda) variant, use `make image-anaconda`, which targets `Dockerfile.anaconda`.
+
 ## Resources
 
 - [AlmaLinux Atomic Respin Template](https://github.com/AlmaLinux/atomic-respin-template)

@@ -27,6 +27,9 @@ image:
 		-f $(CONTAINER_FILE) \
 		.
 
+image-anaconda:
+	$(MAKE) image CONTAINER_FILE=./Dockerfile.anaconda
+
 bib_image:
 	$(SUDO) rm -rf ./output
 	mkdir -p ./output
