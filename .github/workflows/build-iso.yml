@@ -197,19 +197,7 @@ jobs:
 
           FILE_NAME=$(basename "$ARTIFACT_PATH")
           EXT="${FILE_NAME##*.}"
-
-          case "$IMAGE_TYPE" in
-            iso)
-              BASE_NAME="${IMAGE_NAME}-${CLEAN_ARCH}-live"
-              ;;
-            bootc-installer)
-              BASE_NAME="${IMAGE_NAME}-${CLEAN_ARCH}-bootc-installer"
-              ;;
-            *)
-              BASE_NAME="${IMAGE_NAME}-${CLEAN_ARCH}-${IMAGE_TYPE}"
-              ;;
-          esac
-
+          BASE_NAME="${IMAGE_NAME}-${CLEAN_ARCH}"
           TARGET_NAME="${BASE_NAME}.${EXT}"
           CHECKSUM_NAME="${TARGET_NAME}-CHECKSUM"
 
