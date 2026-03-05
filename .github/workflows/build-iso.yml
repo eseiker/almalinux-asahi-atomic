@@ -1,0 +1,303 @@
+---
+name: Build Bootable Artifact
+on:
+  workflow_call:
+    inputs:
+      image:
+        description: "Full podman image reference, including hash"
+        required: true
+        type: string
+      image-name:
+        description: "Name of the image, will be used to name the output file"
+        required: true
+        type: string
+      update_origin_ref:
+        description: "Image reference to update from (ie: {image}:latest)"
+        required: false
+        type: string
+      update_is_signed:
+        description: "Whether the image is signed or not"
+        required: false
+        type: boolean
+        default: true
+      config-file:
+        description: "Path to the configuration file"
+        required: true
+        type: string
+      platforms:
+        description: "The platforms to build the image for"
+        required: false
+        type: string
+        default: "amd64,arm64"
+      image-type:
+        description: "bootc-image-builder type (iso, raw, qcow2, etc)"
+        required: false
+        type: string
+        default: "iso"
+      use_librepo:
+        description: "Use librepo to download the image"
+        required: false
+        type: boolean
+        default: false
+      REGISTRY_USER:
+        description: "The username to use for the registry"
+        required: false
+        type: string
+        default: "${{ github.actor }}"
+      REGISTRY:
+        description: "The registry to push the image to"
+        required: false
+        type: string
+        default: "ghcr.io"
+      upload-to-github:
+        description: "Upload the artifact to GitHub Actions artifacts"
+        required: false
+        type: boolean
+        default: true
+      upload-to-cloudflare:
+        description: "Upload the artifact to Cloudflare R2"
+        required: false
+        type: boolean
+        default: false
+      upload-to-s3:
+        description: "Upload the artifact to S3"
+        required: false
+        type: boolean
+        default: false
+      s3-path:
+        description: "The path to upload the artifact to in S3"
+        required: false
+        type: string
+      bucket:
+        description: "The S3/R2 bucket to upload the artifact to"
+        required: false
+        type: string
+      aws-default-region:
+        description: "The AWS region to use for S3 uploads"
+        required: false
+        type: string
+    secrets:
+      REGISTRY_TOKEN:
+        description: "The token to use for the registry"
+        required: true
+      R2_ACCOUNT_ID:
+        description: "Cloudflare R2 account ID"
+        required: false
+      ACCESS_KEY_ID:
+        description: "Cloudflare R2 access key ID"
+        required: false
+      SECRET_ACCESS_KEY:
+        description: "Cloudflare R2 secret access key"
+        required: false
+      AWS_ROLE_ARN:
+        description: "The AWS role ARN to assume for AWS S3 uploads"
+        required: false
+
+env:
+  BUILDER_ACTION: alexiri/bootc-image-builder-action@platform
+
+jobs:
+  generate_matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Set matrix
+        id: set-matrix
+        run: |
+          platforms=()
+          IFS=',' read -r -a platforms <<< "${{ inputs.platforms }}"
+
+          MATRIX="{\"include\":[]}"
+          for platform in "${platforms[@]}"; do
+            MATRIX=$(echo "$MATRIX" | jq ".include += [{\"platform\": \"$platform\"}]")
+          done
+          echo "matrix=$(echo "$MATRIX" | jq -c '.')" >> $GITHUB_OUTPUT
+
+  build-iso:
+    runs-on: ${{ matrix.platform == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+    needs: generate_matrix
+    strategy:
+      fail-fast: false
+      matrix: ${{fromJson(needs.generate_matrix.outputs.matrix)}}
+    permissions:
+      id-token: write
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+
+      - name: Login to Container Registry
+        uses: redhat-actions/podman-login@4934294ad0449894bcd1e9f191899d7292469603 # v1.7
+        with:
+          registry: ${{ inputs.REGISTRY }}
+          username: ${{ inputs.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_TOKEN }}
+
+      - name: Set up environment
+        id: set-env
+        shell: bash
+        run: |
+          ARCH=${{ matrix.platform }}
+          echo "CLEAN_ARCH=${ARCH//\//_}" >> "$GITHUB_ENV"
+
+          USE_LIBREPO=${{ inputs.use_librepo }}
+          if [ -z "$USE_LIBREPO" ]; then
+            if [ "${{ inputs.image-type }}" != "iso" ]; then
+              USE_LIBREPO=true
+            else
+              USE_LIBREPO=false
+            fi
+          fi
+          echo "USE_LIBREPO=${USE_LIBREPO}" >> "$GITHUB_ENV"
+
+      - name: Prepare configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ "${{ inputs.update_is_signed }}" = "true" ] && SIG="--enforce-container-sigpolicy" || SIG=""
+
+          sed -i 's#<UPDATE_IMAGE_REF>#${{ inputs.update_origin_ref }}#g' ${{ inputs.config-file }}
+          sed -i "s#<IMAGE_SIGNED>#${SIG}#g" ${{ inputs.config-file }}
+          cat ${{ inputs.config-file }}
+
+      - name: Build artifact
+        id: build
+        uses: ${{ env.BUILDER_ACTION }}
+        with:
+          image: ${{ inputs.image }}
+          type: ${{ inputs.image-type }}
+          use-librepo: ${{ env.USE_LIBREPO }}
+          config-file: ${{ inputs.config-file }}
+          platform: linux/${{ matrix.platform }}
+
+      - name: Collect outputs
+        id: collect
+        env:
+          CLEAN_ARCH: ${{ env.CLEAN_ARCH }}
+          IMAGE_TYPE: ${{ inputs.image-type }}
+          IMAGE_NAME: ${{ inputs.image-name }}
+          OUTPUT_PATH: ${{ steps.build.outputs.output-path }}
+          CHECKSUM_PATH: ${{ steps.build.outputs.checksum-path }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEST_DIR="output-${CLEAN_ARCH}"
+          mkdir -p "$DEST_DIR"
+          DEST_DIR=$(realpath "$DEST_DIR")
+
+          FILE_NAME=$(basename "$OUTPUT_PATH")
+          EXT="${FILE_NAME##*.}"
+
+          if [ "$IMAGE_TYPE" = "iso" ]; then
+            BASE_NAME="${IMAGE_NAME}-${CLEAN_ARCH}-live"
+          else
+            BASE_NAME="${IMAGE_NAME}-${CLEAN_ARCH}-${IMAGE_TYPE}"
+          fi
+
+          TARGET_NAME="${BASE_NAME}.${EXT}"
+          CHECKSUM_NAME="${TARGET_NAME}-CHECKSUM"
+
+          cp "$OUTPUT_PATH" "${DEST_DIR}/${TARGET_NAME}"
+          cp "$CHECKSUM_PATH" "${DEST_DIR}/${CHECKSUM_NAME}"
+
+          echo "output_directory=${DEST_DIR}" >> "${GITHUB_OUTPUT}"
+          echo "artifact_name=${BASE_NAME}" >> "${GITHUB_OUTPUT}"
+          echo "image_file=${DEST_DIR}/${TARGET_NAME}" >> "${GITHUB_OUTPUT}"
+          echo "checksum_name=${CHECKSUM_NAME}" >> "${GITHUB_OUTPUT}"
+          echo "iso_name=${TARGET_NAME}" >> "${GITHUB_OUTPUT}"
+
+      - name: Extract kernel/initramfs/dtb
+        id: netboot
+        env:
+          IMAGE_TYPE: ${{ inputs.image-type }}
+          OUTPUT_FILE: ${{ steps.collect.outputs.image_file }}
+          OUTPUT_DIR: ${{ steps.collect.outputs.output_directory }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          NETBOOT_DIR="${OUTPUT_DIR}/netboot"
+          extracted=0
+          mkdir -p "$NETBOOT_DIR"
+
+          if [ "$IMAGE_TYPE" = "iso" ]; then
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends libarchive-tools
+
+            mapfile -t files < <(bsdtar -tf "$OUTPUT_FILE" | grep '^images/pxeboot/' || true)
+            to_copy=()
+            for f in "${files[@]}"; do
+              case "$f" in
+                *vmlinuz*|*Image*|*Image.gz*) to_copy+=("$f") ;;
+                *initrd*.img|*initramfs*.img) to_copy+=("$f") ;;
+                *.dtb) to_copy+=("$f") ;;
+              esac
+            done
+
+            if [ ${#to_copy[@]} -gt 0 ]; then
+              sudo bsdtar -C "$NETBOOT_DIR" -xf "$OUTPUT_FILE" "${to_copy[@]}"
+              extracted=1
+            fi
+          else
+            if [ -f "$OUTPUT_FILE" ]; then
+              sudo mkdir -p /mnt/rawroot
+              LOOP=$(sudo losetup --show -fP "$OUTPUT_FILE")
+              trap 'sudo losetup -d "$LOOP" || true; sudo umount /mnt/rawroot || true' EXIT
+
+              for part in $(ls ${LOOP}p* 2>/dev/null); do
+                if sudo mount -o ro "$part" /mnt/rawroot 2>/dev/null; then
+                  for pattern in \
+                    "/boot/vmlinuz*" "/boot/Image*" "/boot/kernel*" \
+                    "/boot/initramfs*" "/boot/initrd*" \
+                    "/boot/dtb*" "/boot/dtbs*" "/boot/efi/*/*.dtb" "/boot/efi/*/*/*.dtb"; do
+                    if compgen -G "/mnt/rawroot${pattern}" > /dev/null; then
+                      sudo cp -av /mnt/rawroot${pattern} "$NETBOOT_DIR/" || true
+                      extracted=1
+                    fi
+                  done
+                  sudo umount /mnt/rawroot
+                fi
+              done
+
+              sudo losetup -d "$LOOP"
+              trap - EXIT
+            fi
+          fi
+
+          if [ "$extracted" -eq 1 ]; then
+            echo "netboot_directory=${NETBOOT_DIR}" >> "$GITHUB_OUTPUT"
+          else
+            rmdir "$NETBOOT_DIR" 2>/dev/null || true
+          fi
+
+      - name: Upload to Job Artifacts
+        if: inputs.upload-to-github == true
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.collect.outputs.artifact_name }}
+          path: ${{ steps.collect.outputs.output_directory }}
+          if-no-files-found: error
+
+      - name: Upload to Cloudflare
+        if: inputs.upload-to-cloudflare == true
+        uses: AlmaLinux/atomic-ci/.github/actions/upload-r2@v11
+        with:
+          directory: ${{ steps.collect.outputs.output_directory }}
+          bucket: ${{ inputs.bucket }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.SECRET_ACCESS_KEY }}
+
+      - name: Upload to AWS S3
+        if: inputs.upload-to-s3 == true
+        uses: AlmaLinux/atomic-ci/.github/actions/upload-s3@v11
+        with:
+          directory: ${{ steps.collect.outputs.output_directory }}
+          bucket: ${{ inputs.bucket }}
+          path: ${{ inputs.s3-path }}
+          aws-default-region: ${{ inputs.aws-default-region }}
+          iso-name: ${{ steps.collect.outputs.iso_name }}
+          checksum-name: ${{ steps.collect.outputs.checksum_name }}
+          AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}

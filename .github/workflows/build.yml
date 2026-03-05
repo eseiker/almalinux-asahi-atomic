@@ -100,7 +100,7 @@ jobs:
     name: Build ISO
     needs: [set-env, build-image, test-image]
     if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
-    uses: AlmaLinux/atomic-ci/.github/workflows/build-iso.yml@v11
+    uses: ./.github/workflows/build-iso.yml
     with:
       image-name: "${{ needs.set-env.outputs.IMAGE_NAME }}"
       image: "${{ needs.build-image.outputs.image-ref }}@${{ needs.build-image.outputs.digest }}"
@@ -108,6 +108,7 @@ jobs:
       update_is_signed: ${{ needs.set-env.outputs.IS_SIGNED == 'true' }}
       config-file: ./iso.toml
       platforms: ${{ needs.set-env.outputs.PLATFORMS }}
+      image-type: ${{ needs.set-env.outputs.IMAGE_TYPE }}
       REGISTRY: ${{ needs.set-env.outputs.REGISTRY }}
       REGISTRY_USER: ${{ needs.set-env.outputs.REGISTRY_USER }}
       upload-to-cloudflare: false

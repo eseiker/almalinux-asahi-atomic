@@ -31,6 +31,9 @@ outputs:
   IS_SIGNED:
     description: "Whether the image is signed"
     value: ${{ steps.set.outputs.IS_SIGNED }}
+  IMAGE_TYPE:
+    description: "The bootable artifact type to build (e.g. iso, raw)"
+    value: ${{ steps.set.outputs.IMAGE_TYPE }}
 
 runs:
   using: "composite"
@@ -51,6 +54,8 @@ runs:
         IMAGE_PATH=${{ github.repository_owner }}
         IMAGE_NAME=${{ github.event.repository.name }}
         PLATFORMS="arm64"
+        IMAGE_TYPE="${{ vars.IMAGE_TYPE }}"
+        [ -z "${IMAGE_TYPE}" ] && IMAGE_TYPE="iso"
 
         echo "REGISTRY=${REGISTRY}" >> $GITHUB_OUTPUT
         echo "REGISTRY_USER=${REGISTRY_USER}" >> $GITHUB_OUTPUT
@@ -58,6 +63,7 @@ runs:
         echo "IMAGE_NAME=${IMAGE_NAME}" >> $GITHUB_OUTPUT
         echo "IMAGE_REF=${REGISTRY}/${IMAGE_PATH}/${IMAGE_NAME}" >> $GITHUB_OUTPUT
         echo "PLATFORMS=${PLATFORMS}" >> $GITHUB_OUTPUT
+        echo "IMAGE_TYPE=${IMAGE_TYPE}" >> $GITHUB_OUTPUT
 
         # This is a workaround so that the expansion of SIGNING_SECRET doesn't break the if statement
         SECRET=$(cat <<EOF
