@@ -28,9 +28,9 @@ outputs:
   IMAGE_REF:
     description: "The full reference to the image in the registry"
     value: ${{ steps.set.outputs.IMAGE_REF }}
-  IMAGE_TYPE:
-    description: "The bootable artifact type to build (e.g. iso, raw)"
-    value: ${{ steps.set.outputs.IMAGE_TYPE }}
+  IMAGE_TYPES:
+    description: "The bootable artifact types to build (e.g. iso, raw)"
+    value: ${{ steps.set.outputs.IMAGE_TYPES }}
   IS_SIGNED:
     description: "Whether the image is signed"
     value: ${{ steps.set.outputs.IS_SIGNED }}
@@ -54,7 +54,7 @@ runs:
         IMAGE_PATH=${{ github.repository_owner }}
         IMAGE_NAME=${{ github.event.repository.name }}
         PLATFORMS="arm64"
-        IMAGE_TYPE="bootc-installer"
+        IMAGE_TYPES="bootc-installer"
 
         echo "REGISTRY=${REGISTRY}" >> $GITHUB_OUTPUT
         echo "REGISTRY_USER=${REGISTRY_USER}" >> $GITHUB_OUTPUT
@@ -62,7 +62,7 @@ runs:
         echo "IMAGE_NAME=${IMAGE_NAME}" >> $GITHUB_OUTPUT
         echo "IMAGE_REF=${REGISTRY}/${IMAGE_PATH}/${IMAGE_NAME}" >> $GITHUB_OUTPUT
         echo "PLATFORMS=${PLATFORMS}" >> $GITHUB_OUTPUT
-        echo "IMAGE_TYPE=${IMAGE_TYPE}" >> $GITHUB_OUTPUT
+        echo "IMAGE_TYPES=${IMAGE_TYPES}" >> $GITHUB_OUTPUT
 
         # This is a workaround so that the expansion of SIGNING_SECRET doesn't break the if statement
         SECRET=$(cat <<EOF

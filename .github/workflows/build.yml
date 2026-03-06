@@ -14,12 +14,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
   cancel-in-progress: true
 
-env:
-  INTERNAL_ACTIONS_REF: e1e16b0bdbfb5a1cec170e0147a07b153e18f191
-
 jobs:
   set-env:
-    if: github.repository != 'AlmaLinux/atomic-respin-template'
     runs-on: ubuntu-latest
     outputs:
       LATEST_TAG: ${{ steps.set.outputs.LATEST_TAG }}
@@ -29,7 +25,7 @@ jobs:
       IMAGE_PATH: ${{ steps.set.outputs.IMAGE_PATH }}
       IMAGE_NAME: ${{ steps.set.outputs.IMAGE_NAME }}
       IMAGE_REF: ${{ steps.set.outputs.IMAGE_REF }}
-      IMAGE_TYPE: ${{ steps.set.outputs.IMAGE_TYPE }}
+      IMAGE_TYPES: ${{ steps.set.outputs.IMAGE_TYPES }}
       IS_SIGNED: ${{ steps.set.outputs.IS_SIGNED }}
     steps:
       - name: Checkout github actions
@@ -42,9 +38,11 @@ jobs:
 
   build-image:
     name: Build image
-    uses: eseiker/atomic-ci/.github/workflows/build-image.yml@28d84c131122d05b55964fc88ff88d013fd3176f
+    uses: eseiker/atomic-ci/.github/workflows/build-image.yml@80a13c5bf9a57b786d297925dfcfa8148eaa6792
     needs: set-env
     with:
+      INTERNAL_ACTIONS_REPO: eseiker/atomic-ci
+      INTERNAL_ACTIONS_REF: 80a13c5bf9a57b786d297925dfcfa8148eaa6792
       image-description: "AlmaLinux Asahi bootc image"
       containerfile: Dockerfile
       image-name: "${{ needs.set-env.outputs.IMAGE_NAME }}"
@@ -68,22 +66,25 @@ jobs:
       contents: read
       packages: write
       id-token: write
+  
+  image-ref-digest:
+    needs: [set-env, build-image]
+    runs-on: ubuntu-24.04-arm
+    outputs:
+      IMAGE_REF_DIGEST: ${{ steps.set.outputs.IMAGE_REF_DIGEST }}
+    steps:
+      - id: set
+        run: echo "IMAGE_REF_DIGEST=${{ needs.build-image.outputs.image-ref }}@${{ needs.build-image.outputs.digest }}" >> $GITHUB_OUTPUT
 
   test-image:
     name: Test image
     runs-on: ubuntu-24.04-arm
-    needs: [set-env, build-image]
-
+    needs: [set-env, build-image, image-ref-digest]
     permissions:
       packages: read
-
-    env:
-      IMAGE_REF: "${{ needs.build-image.outputs.image-ref }}@${{ needs.build-image.outputs.digest }}"
-
     steps:
       - name: Login to Container Registry
         run: echo ${{ secrets.GITHUB_TOKEN }} | podman login -u ${{ needs.set-env.outputs.REGISTRY_USER }} --password-stdin ${{ needs.set-env.outputs.REGISTRY }}
-
       - name: Test container
         run: |
           # Create a short script to test the image using heredoc
@@ -96,22 +97,54 @@ jobs:
 
           podman run --rm \
             -v /tmp/test.sh:/tmp/test.sh \
-            ${{ env.IMAGE_REF }} \
+            ${{ needs.image-ref-digest.outputs.IMAGE_REF_DIGEST }} \
             /bin/bash /tmp/test.sh
 
-  build-bootable-artifact:
-    name: Build Bootable Artifact
-    needs: [set-env, build-image, test-image]
+  build-installer-image:
+    name: Build installer image
+    uses: eseiker/atomic-ci/.github/workflows/build-image.yml@80a13c5bf9a57b786d297925dfcfa8148eaa6792
+    needs: [set-env, build-image, image-ref-digest, test-image]
     if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
-    uses: ./.github/workflows/build-bootable-artifact.yml
     with:
+      INTERNAL_ACTIONS_REPO: eseiker/atomic-ci
+      INTERNAL_ACTIONS_REF: 80a13c5bf9a57b786d297925dfcfa8148eaa6792
+      image-description: "AlmaLinux Asahi bootc installer image"
+      containerfile: Dockerfile
+      stage: installer
+      extra-args: --build-arg "BASE_IMAGE=${{ needs.image-ref-digest.outputs.IMAGE_REF_DIGEST }}"
+      image-name: "${{ needs.set-env.outputs.IMAGE_NAME }}-installer"
+      previous-image: "${{ needs.set-env.outputs.IMAGE_REF }}-installer:latest"
+      upstream-public-key: bootc-images.pub
+      platforms: ${{ needs.set-env.outputs.PLATFORMS }}
+      skip-maximize-build-space: true
+      image-path: ${{ needs.set-env.outputs.IMAGE_PATH }}
+      changelog-snippet: "BASE_IMAGE=${{ needs.image-ref-digest.outputs.IMAGE_REF_DIGEST }}"
+      REGISTRY: ${{ needs.set-env.outputs.REGISTRY }}
+      REGISTRY_USER: ${{ needs.set-env.outputs.REGISTRY_USER }}
+    secrets:
+      REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      SIGNING_SECRET: ${{ secrets.SIGNING_SECRET }}
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+  
+  build-bootable-artifacts:
+    name: Build Bootable Artifacts
+    needs: [set-env, build-image, test-image, image-ref-digest, build-installer-image]
+    if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+    uses: eseiker/atomic-ci/.github/workflows/build-bootable-artifacts.yml@80a13c5bf9a57b786d297925dfcfa8148eaa6792
+    with:
+      INTERNAL_ACTIONS_REPO: eseiker/atomic-ci
+      INTERNAL_ACTIONS_REF: 80a13c5bf9a57b786d297925dfcfa8148eaa6792
       image-name: "${{ needs.set-env.outputs.IMAGE_NAME }}"
-      image: "${{ needs.build-image.outputs.image-ref }}@${{ needs.build-image.outputs.digest }}"
-      update_origin_ref: "${{ needs.build-image.outputs.image-ref }}@${{ needs.build-image.outputs.digest }}"
+      image: "${{ needs.build-installer-image.outputs.image-ref }}@${{ needs.build-installer-image.outputs.digest }}"
+      update_origin_ref: "${{ needs.image-ref-digest.outputs.IMAGE_REF_DIGEST }}"
       update_is_signed: ${{ needs.set-env.outputs.IS_SIGNED == 'true' }}
       config-file: ./anaconda.toml
       platforms: ${{ needs.set-env.outputs.PLATFORMS }}
-      image-type: ${{ needs.set-env.outputs.IMAGE_TYPE }}
+      image-types: ${{ needs.set-env.outputs.IMAGE_TYPES }}
+      additional-args: --installer-payload-ref="${{ needs.image-ref-digest.outputs.IMAGE_REF_DIGEST }}"
       REGISTRY: ${{ needs.set-env.outputs.REGISTRY }}
       REGISTRY_USER: ${{ needs.set-env.outputs.REGISTRY_USER }}
       upload-to-cloudflare: false
@@ -124,9 +157,9 @@ jobs:
 
   promote-image:
     name: Promote image
-    needs: [set-env, build-image, test-image]
+    needs: [set-env, build-image, test-image, build-installer-image, build-bootable-artifacts]
     if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
-    uses: eseiker/atomic-ci/.github/workflows/retag-image.yml@28d84c131122d05b55964fc88ff88d013fd3176f
+    uses: eseiker/atomic-ci/.github/workflows/retag-image.yml@80a13c5bf9a57b786d297925dfcfa8148eaa6792
     with:
       image: ${{ needs.build-image.outputs.image-ref }}
       digest: ${{ needs.build-image.outputs.digest }}
@@ -144,9 +177,9 @@ jobs:
 
   create-release:
     name: Create Release
-    needs: [set-env, build-image, test-image, build-bootable-artifact, promote-image]
+    needs: [set-env, build-image, test-image, build-bootable-artifacts, promote-image]
     if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
-    uses: eseiker/atomic-ci/.github/workflows/create-release.yml@28d84c131122d05b55964fc88ff88d013fd3176f
+    uses: eseiker/atomic-ci/.github/workflows/create-release.yml@80a13c5bf9a57b786d297925dfcfa8148eaa6792
     with:
       image-name: "${{ needs.set-env.outputs.IMAGE_NAME }}"
       version: ${{ needs.build-image.outputs.version }}
