@@ -38,11 +38,11 @@ jobs:
 
   build-image:
     name: Build image
-    uses: eseiker/atomic-ci/.github/workflows/build-image.yml@80a13c5bf9a57b786d297925dfcfa8148eaa6792
+    uses: eseiker/atomic-ci/.github/workflows/build-image.yml@7dff8c8b24ba24b0c6423eb97adf16a98f19294b
     needs: set-env
     with:
       INTERNAL_ACTIONS_REPO: eseiker/atomic-ci
-      INTERNAL_ACTIONS_REF: 80a13c5bf9a57b786d297925dfcfa8148eaa6792
+      INTERNAL_ACTIONS_REF: 7dff8c8b24ba24b0c6423eb97adf16a98f19294b
       image-description: "AlmaLinux Asahi bootc image"
       containerfile: Dockerfile
       image-name: "${{ needs.set-env.outputs.IMAGE_NAME }}"
@@ -102,12 +102,12 @@ jobs:
 
   build-installer-image:
     name: Build installer image
-    uses: eseiker/atomic-ci/.github/workflows/build-image.yml@80a13c5bf9a57b786d297925dfcfa8148eaa6792
+    uses: eseiker/atomic-ci/.github/workflows/build-image.yml@7dff8c8b24ba24b0c6423eb97adf16a98f19294b
     needs: [set-env, build-image, image-ref-digest, test-image]
     if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
     with:
       INTERNAL_ACTIONS_REPO: eseiker/atomic-ci
-      INTERNAL_ACTIONS_REF: 80a13c5bf9a57b786d297925dfcfa8148eaa6792
+      INTERNAL_ACTIONS_REF: 7dff8c8b24ba24b0c6423eb97adf16a98f19294b
       image-description: "AlmaLinux Asahi bootc installer image"
       containerfile: Dockerfile
       stage: installer
@@ -133,10 +133,10 @@ jobs:
     name: Build Bootable Artifacts
     needs: [set-env, build-image, test-image, image-ref-digest, build-installer-image]
     if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
-    uses: eseiker/atomic-ci/.github/workflows/build-bootable-artifacts.yml@80a13c5bf9a57b786d297925dfcfa8148eaa6792
+    uses: eseiker/atomic-ci/.github/workflows/build-bootable-artifacts.yml@7dff8c8b24ba24b0c6423eb97adf16a98f19294b
     with:
       INTERNAL_ACTIONS_REPO: eseiker/atomic-ci
-      INTERNAL_ACTIONS_REF: 80a13c5bf9a57b786d297925dfcfa8148eaa6792
+      INTERNAL_ACTIONS_REF: 7dff8c8b24ba24b0c6423eb97adf16a98f19294b
       image-name: "${{ needs.set-env.outputs.IMAGE_NAME }}"
       image: "${{ needs.build-installer-image.outputs.image-ref }}@${{ needs.build-installer-image.outputs.digest }}"
       update_origin_ref: "${{ needs.image-ref-digest.outputs.IMAGE_REF_DIGEST }}"
@@ -144,7 +144,7 @@ jobs:
       config-file: ./anaconda.toml
       platforms: ${{ needs.set-env.outputs.PLATFORMS }}
       image-types: ${{ needs.set-env.outputs.IMAGE_TYPES }}
-      additional-args: --installer-payload-ref="${{ needs.image-ref-digest.outputs.IMAGE_REF_DIGEST }}"
+      # additional-args: --installer-payload-ref="${{ needs.image-ref-digest.outputs.IMAGE_REF_DIGEST }}"
       REGISTRY: ${{ needs.set-env.outputs.REGISTRY }}
       REGISTRY_USER: ${{ needs.set-env.outputs.REGISTRY_USER }}
       upload-to-cloudflare: false
@@ -159,7 +159,7 @@ jobs:
     name: Promote image
     needs: [set-env, build-image, test-image, build-installer-image, build-bootable-artifacts]
     if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
-    uses: eseiker/atomic-ci/.github/workflows/retag-image.yml@80a13c5bf9a57b786d297925dfcfa8148eaa6792
+    uses: eseiker/atomic-ci/.github/workflows/retag-image.yml@7dff8c8b24ba24b0c6423eb97adf16a98f19294b
     with:
       image: ${{ needs.build-image.outputs.image-ref }}
       digest: ${{ needs.build-image.outputs.digest }}
@@ -179,7 +179,7 @@ jobs:
     name: Create Release
     needs: [set-env, build-image, test-image, build-bootable-artifacts, promote-image]
     if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
-    uses: eseiker/atomic-ci/.github/workflows/create-release.yml@80a13c5bf9a57b786d297925dfcfa8148eaa6792
+    uses: eseiker/atomic-ci/.github/workflows/create-release.yml@7dff8c8b24ba24b0c6423eb97adf16a98f19294b
     with:
       image-name: "${{ needs.set-env.outputs.IMAGE_NAME }}"
       version: ${{ needs.build-image.outputs.version }}
