@@ -27,7 +27,7 @@ RUN bootc container lint
 FROM ${BASE_IMAGE} AS installer
 
 # https://osbuild.org/docs/developer-guide/projects/image-builder/usage/#bootc-installer-payload-ref
-RUN dnf install -y --setopt=install_weak_deps=False \
+RUN dnf install -y \
     anaconda \
     anaconda-install-env-deps \
     anaconda-dracut \
@@ -39,10 +39,13 @@ RUN dnf install -y --setopt=install_weak_deps=False \
     lorax-templates-* \
     prefixdevname \
     grub2-efi-aa64-cdboot \
-    && dnf reinstall -y shim-aa64 \
+    shim-unsigned-aarch64 \
     && dnf clean all
 
-RUN mkdir -p /boot/efi && cp -ra /usr/lib/efi/*/*/EFI /boot/efi || true
-RUN mkdir /var/mnt
+RUN mkdir -p /var/mnt /usr/lib/ostree-boot/efi/EFI/almalinux/ \
+    && cp -ra /boot/* /usr/lib/ostree-boot/ \
+    && cp -a /usr/share/shim/*/aa64/* /usr/lib/ostree-boot/efi/EFI/almalinux/ \
+    && rm -rf /boot \
+    && ln -s /usr/lib/ostree-boot/ /boot
 
 FROM base

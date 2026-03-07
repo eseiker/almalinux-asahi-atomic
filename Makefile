@@ -4,7 +4,7 @@ PODMAN = $(SUDO) podman
 
 IMAGE_NAME ?= localhost/almalinux-asahi-atomic
 CONTAINER_FILE ?= ./Dockerfile
-IMAGE_CONFIG ?= ./anaconda.toml
+IMAGE_CONFIG ?= ./config.toml
 
 IMAGE_TYPE ?= iso
 QEMU_DISK_RAW ?= ./output/disk.raw
