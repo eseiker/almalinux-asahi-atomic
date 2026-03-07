@@ -39,7 +39,7 @@ jobs:
   build-image:
     name: Build image
     uses: eseiker/atomic-ci/.github/workflows/build-image.yml@7dff8c8b24ba24b0c6423eb97adf16a98f19294b
-    needs: set-env
+    needs: [set-env]
     with:
       INTERNAL_ACTIONS_REPO: eseiker/atomic-ci
       INTERNAL_ACTIONS_REF: 7dff8c8b24ba24b0c6423eb97adf16a98f19294b
@@ -68,7 +68,7 @@ jobs:
       id-token: write
   
   image-ref-digest:
-    needs: [set-env, build-image]
+    needs: [build-image]
     runs-on: ubuntu-24.04-arm
     outputs:
       IMAGE_REF_DIGEST: ${{ steps.set.outputs.IMAGE_REF_DIGEST }}
@@ -79,7 +79,7 @@ jobs:
   test-image:
     name: Test image
     runs-on: ubuntu-24.04-arm
-    needs: [set-env, build-image, image-ref-digest]
+    needs: [set-env, image-ref-digest]
     permissions:
       packages: read
     steps:
@@ -103,8 +103,8 @@ jobs:
   build-installer-image:
     name: Build installer image
     uses: eseiker/atomic-ci/.github/workflows/build-image.yml@7dff8c8b24ba24b0c6423eb97adf16a98f19294b
-    needs: [set-env, build-image, image-ref-digest, test-image]
-    if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+    needs: [set-env, image-ref-digest, test-image]
+    if: ${{ contains(needs.set-env.outputs.IMAGE_TYPES, 'bootc-installer') }}
     with:
       INTERNAL_ACTIONS_REPO: eseiker/atomic-ci
       INTERNAL_ACTIONS_REF: 7dff8c8b24ba24b0c6423eb97adf16a98f19294b
@@ -128,23 +128,50 @@ jobs:
       contents: read
       packages: write
       id-token: write
-  
+
+  prepare-build-bootable-artifacts-args:
+    name: Prepare build-bootable-artifacts arguments
+    needs: [set-env, build-image, image-ref-digest, test-image, build-installer-image]
+    if: ${{
+          github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+          && always() && needs.test-image.result == 'success'
+        }}
+    runs-on: ubuntu-24.04-arm
+    outputs:
+      IMAGE: ${{ steps.set.outputs.IMAGE }}
+      ADDITIONAL_ARGS: ${{ steps.set.outputs.ADDITIONAL_ARGS }}
+    steps:
+      - id: set
+        run: |
+          IS_BOOTC_INSTALLER=$([[ "${{ needs.set-env.outputs.IMAGE_TYPES }}" == *"bootc-installer"* ]] && echo "true" || echo "false")
+
+          if [[ $IS_BOOTC_INSTALLER == "true" ]]; then
+            IMAGE="${{ needs.build-installer-image.outputs.image-ref }}@${{ needs.build-installer-image.outputs.digest }}"
+            echo "IMAGE=${IMAGE}" >> $GITHUB_OUTPUT
+            # echo "ADDITIONAL_ARGS=--installer-payload-ref=${{ needs.image-ref-digest.outputs.IMAGE_REF_DIGEST }}" >> $GITHUB_OUTPUT
+            # temporary workaround
+            echo "ADDITIONAL_ARGS=--installer-payload-ref=${IMAGE}" >> $GITHUB_OUTPUT
+          else
+            echo "IMAGE=${{ needs.image-ref-digest.outputs.IMAGE_REF_DIGEST }}" >> $GITHUB_OUTPUT
+            echo "ADDITIONAL_ARGS=" >> $GITHUB_OUTPUT
+          fi
+
   build-bootable-artifacts:
     name: Build Bootable Artifacts
-    needs: [set-env, build-image, test-image, image-ref-digest, build-installer-image]
-    if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+    needs: [set-env, image-ref-digest, prepare-build-bootable-artifacts-args]
+    if: ${{ always() && needs.prepare-build-bootable-artifacts-args.result == 'success' }}
     uses: eseiker/atomic-ci/.github/workflows/build-bootable-artifacts.yml@7dff8c8b24ba24b0c6423eb97adf16a98f19294b
     with:
       INTERNAL_ACTIONS_REPO: eseiker/atomic-ci
       INTERNAL_ACTIONS_REF: 7dff8c8b24ba24b0c6423eb97adf16a98f19294b
       image-name: "${{ needs.set-env.outputs.IMAGE_NAME }}"
-      image: "${{ needs.build-installer-image.outputs.image-ref }}@${{ needs.build-installer-image.outputs.digest }}"
+      image: "${{ needs.prepare-build-bootable-artifacts-args.outputs.IMAGE }}"
       update_origin_ref: "${{ needs.image-ref-digest.outputs.IMAGE_REF_DIGEST }}"
       update_is_signed: ${{ needs.set-env.outputs.IS_SIGNED == 'true' }}
       config-file: ./anaconda.toml
       platforms: ${{ needs.set-env.outputs.PLATFORMS }}
       image-types: ${{ needs.set-env.outputs.IMAGE_TYPES }}
-      # additional-args: --installer-payload-ref="${{ needs.image-ref-digest.outputs.IMAGE_REF_DIGEST }}"
+      additional-args: ${{ needs.prepare-build-bootable-artifacts-args.outputs.ADDITIONAL_ARGS }}
       REGISTRY: ${{ needs.set-env.outputs.REGISTRY }}
       REGISTRY_USER: ${{ needs.set-env.outputs.REGISTRY_USER }}
       upload-to-cloudflare: false
@@ -157,8 +184,8 @@ jobs:
 
   promote-image:
     name: Promote image
-    needs: [set-env, build-image, test-image, build-installer-image, build-bootable-artifacts]
-    if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+    needs: [set-env, build-image, test-image, build-bootable-artifacts]
+    if: ${{ always() && needs.build-bootable-artifacts.result == 'success' }}
     uses: eseiker/atomic-ci/.github/workflows/retag-image.yml@7dff8c8b24ba24b0c6423eb97adf16a98f19294b
     with:
       image: ${{ needs.build-image.outputs.image-ref }}
@@ -177,8 +204,8 @@ jobs:
 
   create-release:
     name: Create Release
-    needs: [set-env, build-image, test-image, build-bootable-artifacts, promote-image]
-    if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+    needs: [set-env, build-image, promote-image]
+    if: ${{ always() && needs.promote-image.result == 'success' }}
     uses: eseiker/atomic-ci/.github/workflows/create-release.yml@7dff8c8b24ba24b0c6423eb97adf16a98f19294b
     with:
       image-name: "${{ needs.set-env.outputs.IMAGE_NAME }}"
