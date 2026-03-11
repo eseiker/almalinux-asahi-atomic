@@ -153,7 +153,7 @@ jobs:
             echo "ADDITIONAL_ARGS=--installer-payload-ref=${IMAGE}" >> $GITHUB_OUTPUT
           else
             echo "IMAGE=${{ needs.image-ref-digest.outputs.IMAGE_REF_DIGEST }}" >> $GITHUB_OUTPUT
-            echo "ADDITIONAL_ARGS=" >> $GITHUB_OUTPUT
+            echo "ADDITIONAL_ARGS=--rootfs=btrfs" >> $GITHUB_OUTPUT
           fi
 
   build-bootable-artifacts:
