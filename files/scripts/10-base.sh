@@ -5,7 +5,7 @@ set -xeuo pipefail
 ostree config set sysroot.bootprefix true
 
 dnf -y install dnf-plugins-core
-dnf -y copr enable eseiker/asahi-el-kernel
+dnf -y copr enable eseiker/asahi-el-kernel rhel-10-aarch64
 dnf -y swap kernel* kernel-16k
 dnf -y install kernel-16k-modules-extra systemd-boot-unsigned system-reinstall-bootc @core
 dnf -y update
