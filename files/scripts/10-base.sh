@@ -4,10 +4,12 @@ set -xeuo pipefail
 
 ostree config set sysroot.bootprefix true
 
-dnf -y install dnf-plugins-core
+dnf -y install dnf-plugins-core epel-release
 dnf -y copr enable eseiker/asahi-el-kernel rhel-10-aarch64
+dnf -y copr enable @asahi/u-boot
 dnf -y swap kernel* kernel-16k
 dnf -y install kernel-16k-modules-extra systemd-boot-unsigned system-reinstall-bootc @core
+dnf -y install asahi-scripts asahi-fwupdate dracut-asahi linux-firmware-vendor update-m1n1 asahi-battery
 dnf -y update
 
 # dracut generate initramfs workaround
