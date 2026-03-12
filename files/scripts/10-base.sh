@@ -7,7 +7,7 @@ ostree config set sysroot.bootprefix true
 dnf -y install dnf-plugins-core epel-release
 dnf -y update
 
-dnf -y copr enable eseiker/asahi-el-kernel rhel-10-aarch64
+dnf -y copr enable eseiker/asahi-el-kernel
 dnf -y swap kernel* kernel-16k
 dnf -y install kernel-16k-modules-extra systemd-boot-unsigned @core @networkmanager-submodules
 
