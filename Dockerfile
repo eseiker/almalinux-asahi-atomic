@@ -9,7 +9,7 @@ COPY --chmod=0755 files/scripts /build_files/
 COPY *.pub /keys/
 
 # Base Image
-FROM quay.io/almalinuxorg/almalinux-bootc:10@sha256:e316791e3f14fb57b8a2096a8e297e9b55ca98371c5a8b7a10836c84b4fd8026 AS base
+FROM quay.io/almalinuxorg/almalinux-bootc:10-kitten@sha256:9401252c61f36271e38a0efe959d293b254c14422bf3369d9220bea1fa2aea94 AS base
 
 ARG IMAGE_NAME
 ARG IMAGE_REGISTRY
@@ -22,30 +22,3 @@ RUN --mount=type=tmpfs,dst=/opt \
 ### LINTING
 ## Verify final image and contents are correct.
 RUN bootc container lint
-
-# Installer Image
-FROM ${BASE_IMAGE} AS installer
-
-# https://osbuild.org/docs/developer-guide/projects/image-builder/usage/#bootc-installer-payload-ref
-RUN dnf install -y \
-    anaconda \
-    anaconda-install-env-deps \
-    anaconda-dracut \
-    dracut-config-generic \
-    dracut-network \
-    net-tools \
-    squashfs-tools \
-    python3-mako \
-    lorax-templates-* \
-    prefixdevname \
-    grub2-efi-aa64-cdboot \
-    shim-unsigned-aarch64 \
-    && dnf clean all
-
-RUN mkdir -p /var/mnt /usr/lib/ostree-boot/efi/EFI/almalinux/ \
-    && cp -ra /boot/* /usr/lib/ostree-boot/ \
-    && cp -a /usr/share/shim/*/aa64/* /usr/lib/ostree-boot/efi/EFI/almalinux/ \
-    && rm -rf /boot \
-    && ln -s /usr/lib/ostree-boot/ /boot
-
-FROM base
