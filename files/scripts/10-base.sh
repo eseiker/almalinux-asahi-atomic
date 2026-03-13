@@ -2,8 +2,6 @@
 
 set -xeuo pipefail
 
-ostree config set sysroot.bootprefix true
-
 dnf -y install dnf-plugins-core epel-release
 dnf -y update
 
@@ -18,4 +16,4 @@ dnf -y update
 
 # dracut generate initramfs workaround
 kver=$(cd /usr/lib/modules && echo *); \
-  dracut --no-hostonly --reproducible --show-modules -vf /usr/lib/modules/$kver/initramfs.img $kver
+  DRACUT_NO_XATTR=1 dracut --no-hostonly --reproducible -a "bootc" -vf /usr/lib/modules/$kver/initramfs.img $kver
