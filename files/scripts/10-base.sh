@@ -16,4 +16,4 @@ dnf -y update
 
 # dracut generate initramfs workaround
 kver=$(cd /usr/lib/modules && echo *); \
-  dracut --no-hostonly --reproducible -a "bootc" -vf /usr/lib/modules/$kver/initramfs.img $kver
+  dracut --no-hostonly --reproducible -vf /usr/lib/modules/$kver/initramfs.img $kver

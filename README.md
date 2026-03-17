@@ -3,7 +3,7 @@
 ## Base image
 
 This respin uses the minimal bootc image
-`quay.io/almalinuxorg/almalinux-bootc:10-kitten`(https://github.com/AlmaLinux/bootc-images).
+`quay.io/almalinuxorg/almalinux-bootc:10`(https://github.com/AlmaLinux/bootc-images).
 The base image signature is verified with the Cosign public key stored as
 [`bootc-images.pub`](bootc-images.pub);
 update this file and the workflow reference if the upstream key changes.
