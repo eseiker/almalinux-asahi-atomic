@@ -9,6 +9,7 @@ dnf -y copr enable eseiker/asahi-el-kernel
 dnf -y swap kernel* kernel-16k
 dnf -y install kernel-16k-modules-extra @core @networkmanager-submodules
 
+dnf -y copr enable eseiker/asahi
 dnf -y copr enable @centoshyperscale/asahi
 dnf -y copr enable @asahi/u-boot
 dnf -y install asahi-scripts asahi-fwupdate dracut-asahi linux-firmware-vendor update-m1n1 asahi-battery asahi-audio mesa-vulkan-drivers
