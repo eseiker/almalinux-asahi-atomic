@@ -206,7 +206,7 @@ jobs:
     name: Create Release
     needs: [set-env, build-image, promote-image]
     if: ${{ always() && needs.promote-image.result == 'success' }}
-    uses: eseiker/atomic-ci/.github/workflows/create-release.yml@7dff8c8b24ba24b0c6423eb97adf16a98f19294b
+    uses: eseiker/atomic-ci/.github/workflows/create-release.yml@95206d08ea4b085ccadd7f281e9eecf6e9fe2af7
     with:
       image-name: "${{ needs.set-env.outputs.IMAGE_NAME }}"
       version: ${{ needs.build-image.outputs.version }}
